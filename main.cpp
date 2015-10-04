@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <algorithm>
 #include <vector>
 #include <random>
 #include <fstream>
@@ -7,18 +8,21 @@
 
 int numVars = 0;
 int numClauses = 0;
+int WALKSAT_PROBABILITY = 90;//n% of best 1-n% random
+std::vector<std::vector<int>> geneticProb;
 
 void display(std::vector<std::vector<int>>);
-bool negate(bool b);
-std::vector<std::vector<int>> parseFile(std::string filename);//goes through file and puts input into 2d array
+bool negate(bool);
+std::vector<std::vector<int>> parseFile(std::string);//goes through file and puts input into 2d array
 std::vector<bool> hillClimb(std::vector<std::vector<int>>);//returns solution using hillClimb
 bool solveDisjunction(std::vector<int>, std::vector<bool>);//given a disjunction(arg1) and a set of value(arg2) return if it is true
 int getHueristic(std::vector<std::vector<int>>, std::vector<bool>);//given CNF(arg1) and set values (arg2) return number of true clauses
+std::vector<bool> walkSAT(std::vector<std::vector<int>>);//returns a solution using walkSat
 std::vector<bool> randomLiterals();
-
+std::vector<bool> genetic(std::vector<std::vector<int>>);
 int main(int argc, char* argv[])
 {
-	bool satisfiable = false;
+	bool satisfiable = true;
 	bool unSatisfiable = true;
 	std::string satFileName;
 	if (argc == 0)
@@ -28,46 +32,160 @@ int main(int argc, char* argv[])
 	}
 	else if (argc == 1)
 	{
-		satFileName = "test2.cnf";
+		satFileName = "test.cnf";
 	//	satFileName = argv[1];
 	}
 	std::vector<std::vector<int>> satList;
 	std::vector<bool> solution;
 	satList = parseFile(satFileName);
-	display(satList);
-	/*
-	std::vector<bool> testLits = { false, false, false };
-	std::cout << getHueristic(satList, testLits);
-	*/
-	solution = hillClimb(satList);
-	for (size_t i = 0; i < solution.size(); i++)
-	{
-		std::cout << i+1 << " : " << solution[i] << std::endl;
-	}
 
 
-	char c;
-	std::cin >> c;
+	std::cout << "c Trying to find a solution. . .\n";
+	//solution = hillClimb(satList);
+	//solution = walkSAT(satList);
+	solution = genetic(satList);
+
+
 	if (satisfiable)
 	{
-		std::cout << "s SATISFIABLE\0";
+		std::cout << "s SATISFIABLE\n";
 		//display();
+		std::cout << "c Done. Runtime: " << std::endl;
+		char c;
+		std::cin >> c;
 		return 10;
 	}
 	else if(unSatisfiable)
 	{
-		std::cout << "s UNSATISFIABLE\0";
+		std::cout << "s UNSATISFIABLE\n";	
+		std::cout << "c Done. Runtime: " << std::endl;
+		char c;
+		std::cin >> c;
 		return 20;
 	}
 	else
 	{
 		std::cout << "s UNKNOWN\0";
 	}
+
 }
 
+bool modelCompare(std::vector<bool> a, std::vector<bool> b)
+{
+	return getHueristic(geneticProb, a) < getHueristic(geneticProb, b);
+}
+std::vector<std::vector<bool>> reproduce(std::vector<std::vector<bool>> parents)
+{
+	srand(time(NULL));
+	int random = rand() % 100;
+	std::vector<std::vector<bool>> children;
+	for (size_t i = 0; i < parents.size(); i+=2)
+	{
+		std::vector<bool> child1;
+		std::vector<bool> child2;
+		for (size_t j = 0; j < parents[i].size(); j++)
+		{
+			if (j < parents.size() / 2)//first half
+			{
+				child1.push_back(parents[i][j]);
+				child2.push_back(parents[i+1][j]);
+			}
+			else//second half
+			{
+				child1.push_back(parents[i+1][j]);
+				child2.push_back(parents[i][j]);
+			}
+		}
+		children.push_back(child1);
+		children.push_back(child2);
+	}
+	return children;
+}
+std::vector<bool> genetic(std::vector<std::vector<int>> cnf)
+{
+	geneticProb = cnf;
+	int populationSize = 100;
+	int numKills = 10;
+	int numReproduce = 10;//must be even
+	std::vector<std::vector<bool>> modelPopulation;
+	for (int i = 0; i < populationSize; i++)
+	{
+		modelPopulation.push_back(randomLiterals());//fill the population with randoms
+	}
+	
+	while (true)
+	{
+		std::sort(modelPopulation.begin(), modelPopulation.end(), modelCompare);
+		if (getHueristic(cnf, modelPopulation[0]))//after sort best hueristic should be first
+		{
+			return modelPopulation[0];
+		}
 
 
+		modelPopulation._Pop_back_n(numKills);//kill bottom %
+		std::vector<std::vector<bool>> parents = modelPopulation;
+		parents.resize(numReproduce);//pick top
+		std::vector<std::vector<bool>> children = reproduce(parents);
+		modelPopulation.insert(modelPopulation.end(), children.begin(), children.end());//add childrent to population
 
+		//sort population
+		//pick top 10% for reproducing
+		//pop bottom 10%
+
+	}
+}
+std::vector<bool> walkSAT(std::vector<std::vector<int>> cnf)
+{
+	std::vector<bool> model;
+	model = randomLiterals();
+	while (true)//timeout will stop it
+	{
+
+		if (getHueristic(cnf, model) == numClauses)
+		{
+			return model;
+		}
+		//add terminating if stat
+
+		//get random clause from list
+		//get vars in clause
+		//rand
+		//if rand 50% then flip random var
+		//else flip best var in clause kinda like  hill climb but with 1 clause
+		int randomClause;
+		do
+		{
+			srand(time(NULL));
+			randomClause = rand() % (cnf.size() - 1);
+		} while (!solveDisjunction(cnf[randomClause], model));//find a random clause that is false 
+
+		int p = rand() % 100;
+		if (p > WALKSAT_PROBABILITY)
+		{
+			//flip random variable in clause
+			int randomVar = rand() % (cnf[randomClause].size() - 1);
+			int var = abs(cnf[randomClause][randomVar]);
+			model[var - 1] = negate(model[var - 1]);
+		}
+		else
+		{
+			//flip variable in clause that improves the most
+			int bestHueristic = getHueristic(cnf, model);
+			for (size_t i = 0; i < model.size(); i++)
+			{
+				//make neighbors and find best
+				std::vector<bool> neighbor = model;
+				neighbor[i] = negate(neighbor[i]);
+				int neighborHueristic = getHueristic(cnf, neighbor);
+				if (neighborHueristic > bestHueristic)
+				{
+					bestHueristic = neighborHueristic;
+					model = neighbor;
+				}
+			}
+		}
+	}
+}
 
 bool solveDisjunction(std::vector<int> disj, std::vector<bool> literals)
 {
@@ -172,7 +290,6 @@ std::vector<std::vector<int>> parseFile(std::string filename)
 			file >> buf;
 			file >> numVars;
 			file >> numClauses;
-			std::cout << buf << ' ' << numVars << ' '<< numClauses << '\n';
 			getline(file, buf);//dump rest of line
 		}
 		else if (lineType == 'c')
