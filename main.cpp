@@ -5,13 +5,13 @@
 #include <random>
 #include <fstream>
 #include <time.h>
+#include <ctime>
 
 int numVars = 0;
 int numClauses = 0;
 int WALKSAT_PROBABILITY = 90;//n% of best 1-n% random
 std::vector<std::vector<int>> geneticProb;
 
-void display(std::vector<std::vector<int>>);
 bool negate(bool);
 std::vector<std::vector<int>> parseFile(std::string);//goes through file and puts input into 2d array
 std::vector<bool> hillClimb(std::vector<std::vector<int>>);//returns solution using hillClimb
@@ -32,42 +32,56 @@ int main(int argc, char* argv[])
 	}
 	else if (argc == 1)
 	{
-		satFileName = "test.cnf";
-	//	satFileName = argv[1];
+		satFileName = argv[1];
 	}
 	std::vector<std::vector<int>> satList;
 	std::vector<bool> solution;
 	satList = parseFile(satFileName);
+	
 
-
-	std::cout << "c Trying to find a solution. . .\n";
-	//solution = hillClimb(satList);
-	//solution = walkSAT(satList);
-	solution = genetic(satList);
-
-
-	if (satisfiable)
+	for (int i = 0; i < 3; i++)
 	{
-		std::cout << "s SATISFIABLE\n";
-		//display();
-		std::cout << "c Done. Runtime: " << std::endl;
-		char c;
-		std::cin >> c;
-		return 10;
-	}
-	else if(unSatisfiable)
-	{
-		std::cout << "s UNSATISFIABLE\n";	
-		std::cout << "c Done. Runtime: " << std::endl;
-		char c;
-		std::cin >> c;
-		return 20;
-	}
-	else
-	{
-		std::cout << "s UNKNOWN\0";
-	}
+		clock_t begin = clock();
+		if (i == 0)
+		{
+			std::cout << "c Trying to find a solution using hill climbing. . .\n";
+			solution = hillClimb(satList);
+		}
+		else if (i == 1)
+		{
+			std::cout << "c Trying to find a solution using walkSAT. . .\n";
+			solution = walkSAT(satList);
+		}
+		else
+		{
+			std::cout << "c Trying to find a solution using genetic. . .\n";
 
+			solution = genetic(satList);
+		}
+		clock_t end = clock();
+		double runtime = double(end - begin) / CLOCKS_PER_SEC;
+		if (satisfiable)
+		{
+			std::cout << "s SATISFIABLE\n";
+			std::cout << "v Solution: ";
+			for (size_t j = 0; j < solution.size(); j ++)
+			{
+				std::cout << solution[j] << " ";
+			}
+			std::cout << "\nc Done. Runtime: " << runtime << "s" << std::endl;
+		}
+		else if (unSatisfiable)
+		{
+			std::cout << "s UNSATISFIABLE\n";
+			std::cout << "c Done. Runtime: " << runtime << "s" << std::endl;
+		}
+		else
+		{
+			std::cout << "s UNKNOWN\0";
+		}
+		std::cout << std::endl;
+	}
+	return 0;
 }
 
 bool modelCompare(std::vector<bool> a, std::vector<bool> b)
@@ -312,15 +326,4 @@ std::vector<std::vector<int>> parseFile(std::string filename)
 		file >> lineType;
 	}
 	return cnfList;
-}
-void display(std::vector<std::vector<int>> cnf)
-{
-	for (size_t i = 0; i < cnf.size(); i++)
-	{
-		for (size_t j = 0; j < cnf[i].size(); j++)
-		{
-			std::cout << cnf[i][j] << ' ';
-		}
-		std::cout << std::endl;
-	}
 }
