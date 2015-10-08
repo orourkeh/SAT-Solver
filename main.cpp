@@ -30,9 +30,10 @@ int main(int argc, char* argv[])
 		std::cout << "Usage ./" << argv[0] << " [SAT filename]" << std::endl;
 		return 0;
 	}
-	else if (argc == 1)
+	else if (argc >= 1)
 	{
 		satFileName = argv[1];
+		std::cout << "c Opening file: " << satFileName << std::endl;
 	}
 	std::vector<std::vector<int>> satList;
 	std::vector<bool> solution;
@@ -135,7 +136,7 @@ std::vector<bool> genetic(std::vector<std::vector<int>> cnf)
 			return modelPopulation[0];
 		}
 		modelPopulation.resize(modelPopulation.size() - numKills);
-		modelPopulation._Pop_back_n(numKills);//kill bottom %
+		//modelPopulation._Pop_back_n(numKills);//kill bottom %
 		std::vector<std::vector<bool>> parents = modelPopulation;
 		parents.resize(numReproduce);//pick top
 		std::vector<std::vector<bool>> children = reproduce(parents);
