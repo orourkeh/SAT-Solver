@@ -32,14 +32,18 @@ int main(int argc, char* argv[])
 	}
 	else if (argc >= 1)
 	{
+		//satFileName = "test2.cnf";
 		satFileName = argv[1];
 		std::cout << "c Opening file: " << satFileName << std::endl;
 	}
 	std::vector<std::vector<int>> satList;
 	std::vector<bool> solution;
 	satList = parseFile(satFileName);
-	
-
+	if (satList.size() < 1)
+	{
+		return 1;
+	}
+	std::cout << "c CNF has " << numVars << " variables and " << numClauses << " clauses\n";
 	for (int i = 0; i < 3; i++)
 	{
 		clock_t begin = clock();
@@ -82,7 +86,10 @@ int main(int argc, char* argv[])
 		}
 		std::cout << std::endl;
 	}
+	char c;
+	std::cin >> c;
 	return 0;
+
 }
 
 bool modelCompare(std::vector<bool> a, std::vector<bool> b)
